@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>My BCIT Project</title>
+    <meta name="comp1800 template" content="My 1800 App">
+
+    <!------------------------>
+    <!-- Required meta tags -->
+    <!------------------------>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!------------------------------------------>
+    <!-- Bootstrap Library CSS JS CDN go here -->
+    <!------------------------------------------>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous">
+    </script>
+
+    <!-------------------------------------------------------->
+    <!-- Firebase 8 Library related CSS, JS, JQuery go here -->
+    <!-------------------------------------------------------->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/ui/4.8.1/firebase-ui-auth.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.8.1/firebase-ui-auth.css" />
+    <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-storage.js"></script>
+
+    <!-------------------------------------------->
+    <!-- Other libraries and styles of your own -->
+    <!-------------------------------------------->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="./styles/style.css">
+
+</head>
+
+<body>
+    <!------------------------------>
+    <!-- Your HTML Layout go here -->
+    <!------------------------------>
+
+    <!-- our own navbar goes here -->
+    <nav id="navbarPlaceholder"></nav>
+
+    <!-- the body of your page goes here -->
+    <div class="container-fluid bg-dark text-light p-5">
+        <h1>Let's make a post</h1>
+        <div class="container py-3">
+            <input type="file" id="mypic-input" accept="image/*" />
+            <img id="mypic-goes-here" src="..." width=50 height=50 />
+        </div>
+
+        <div class="container py-3">
+            <label for="fname">Details:</label>
+            <input type="text" id="details">
+            <input type="submit" value="Post" id="post">
+        </div>
+    </div>
+
+    <!-- our own footer goes here-->
+    <nav id="footerPlaceholder"></nav>
+
+    <!---------------------------------------------->
+    <!-- Your own JavaScript functions go here    -->
+    <!---------------------------------------------->
+    <script src="./scripts/firebaseAPI_team99.js"></script>
+    <script src="./scripts/skeleton.js"></script>
+    <script src="./scripts/script.js"></script>
+
+    <script>
+        function showUploadedPicture() {
+            const fileInput = document.getElementById("mypic-input"); // pointer #1
+            const image = document.getElementById("mypic-goes-here"); // pointer #2
+            fileInput.addEventListener('change', function (e) { //event listener
+                var file = e.target.files[0];
+                var blob = URL.createObjectURL(file);
+                image.src = blob; //change DOM image
+
+                // //save filename into local storage
+                // localStorage.setItem("file", file);
+                // var storageRef = firebase.storage().ref();
+
+
+                storage.ref().child('file.png').put(file).then((snapshot) => {
+                    console.log('Uploaded a blob or file!');
+                });
+
+                // //upload the picked file with .put()
+                // storageRef.child("file.jpg").put(file)
+                //     .then(function (snap) {
+                //         console.log('Uploaded to Cloud Storage.');
+                //     })
+            })
+        }
+        showUploadedPicture();
+
+        function addPostListener() {
+            document.getElementById("post").addEventListener("click", function () {
+                alert("Post clicked!");
+                var postdetails = document.getElementById("details").value;
+                console.log(details);
+                var obj = {
+                    details: postdetails,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                }
+                console.log(obj);
+                db.collection("posts")
+                    .add(obj)
+                    .then(function (doc) {
+                        console.log(doc.id); //prints id of the newly added doc
+                        const file = localStorage.getItem("file");
+                        savePicture(file, doc.id)
+                    })
+            })
+        }
+        addPostListener();
+
+        function savePicture(file, id) {
+
+            alert("inside save picture" + file + " " + id)
+            //store using this name
+            //var storageRef = storage.ref(id + ".jpg");
+            // Create a root reference
+            var storageRef = firebase.storage().ref();
+
+            //upload the picked file with .put()
+            storageRef.child("file.jpg").put(file)
+                .then(function (snap) {
+                    console.log('Uploaded to Cloud Storage.');
+                    //get the URL of stored file with .getDownloadURL()
+                    storageRef.getDownloadURL()
+                        .then(function (url) { // Get URL of the uploaded file
+                            console.log(url); // Save the URL into users collection
+                            db.collection("posts").doc(id).update({
+                                    "image": url
+                                })
+                                .then(function () {
+                                    console.log('Added post picture to Firestore.');
+                                })
+                        })
+                })
+        }
+    </script>
+
+</body>
+
+</html>
