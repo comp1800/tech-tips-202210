@@ -18,7 +18,7 @@
         integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous">
-    </script>
+        </script>
 
     <!-------------------------------------------------------->
     <!-- Firebase 8 Library related CSS, JS, JQuery go here -->
@@ -29,7 +29,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/ui/4.8.1/firebase-ui-auth.js"></script>
     <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.8.1/firebase-ui-auth.css" />
-    <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-storage.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
 
     <!-------------------------------------------->
     <!-- Other libraries and styles of your own -->
@@ -62,6 +62,9 @@
         </div>
     </div>
 
+    <div id="database-picture-goes-here">
+    </div>
+
     <!-- our own footer goes here-->
     <nav id="footerPlaceholder"></nav>
 
@@ -73,76 +76,104 @@
     <script src="./scripts/script.js"></script>
 
     <script>
-        function showUploadedPicture() {
-            const fileInput = document.getElementById("mypic-input"); // pointer #1
+        //----------------------------0------------------------
+        // This event listener waits for user to upload a image
+        //-----------------------------------------------------
+        var theFile;
+        function addImagePicker() {
+            const fileChoice = document.getElementById("mypic-input"); // pointer #1
             const image = document.getElementById("mypic-goes-here"); // pointer #2
-            fileInput.addEventListener('change', function (e) { //event listener
-                var file = e.target.files[0];
-                var blob = URL.createObjectURL(file);
+            fileChoice.addEventListener('change', function (e) { //event listener
+                theFile = e.target.files[0];
+                var blob = URL.createObjectURL(theFile);
                 image.src = blob; //change DOM image
-
-                // //save filename into local storage
-                // localStorage.setItem("file", file);
-                // var storageRef = firebase.storage().ref();
-
-
-                storage.ref().child('file.png').put(file).then((snapshot) => {
-                    console.log('Uploaded a blob or file!');
-                });
-
-                // //upload the picked file with .put()
-                // storageRef.child("file.jpg").put(file)
-                //     .then(function (snap) {
-                //         console.log('Uploaded to Cloud Storage.');
-                //     })
+                // console.log(file);  //just FYI, whole file object
+                // console.log(file.name);  //just FYI, name of file
+                // console.log(blob);  //string that represents file
+                // //Temporarily store file object into local stroage
+                // localStorage.setItem("pickedfile", file);
             })
         }
-        showUploadedPicture();
+        addImagePicker();          
 
         function addPostListener() {
             document.getElementById("post").addEventListener("click", function () {
-                alert("Post clicked!");
+                //alert("Post clicked!");
+
+                //construct a new post object with details from our form
                 var postdetails = document.getElementById("details").value;
-                console.log(details);
                 var obj = {
                     details: postdetails,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 }
-                console.log(obj);
+                //console.log(obj);
+
+                //create a new post doc and save into firestore with ".add"
                 db.collection("posts")
                     .add(obj)
                     .then(function (doc) {
+                        console.log("Created a new post object! ");
                         console.log(doc.id); //prints id of the newly added doc
-                        const file = localStorage.getItem("file");
-                        savePicture(file, doc.id)
+                        savePicture(doc.id)  //id of newly created post
                     })
             })
         }
         addPostListener();
 
-        function savePicture(file, id) {
+        function savePicture(postid) {
+            //get the file that was picked earlier
+            var file = localStorage.getItem("pickedfile");
+            console.log(file);
 
-            alert("inside save picture" + file + " " + id)
-            //store using this name
-            //var storageRef = storage.ref(id + ".jpg");
-            // Create a root reference
-            var storageRef = firebase.storage().ref();
+            //get a pointer to where we went the picture to be saved
+            var storageRef = firebase.storage().ref(postid + ".jpg")
+
+            var metadata = {
+                contentType: 'image/jpeg',
+            };
 
             //upload the picked file with .put()
-            storageRef.child("file.jpg").put(file)
+            storageRef.put(theFile, metadata)
                 .then(function (snap) {
+                    //the file has successfully been put into storage
                     console.log('Uploaded to Cloud Storage.');
                     //get the URL of stored file with .getDownloadURL()
                     storageRef.getDownloadURL()
                         .then(function (url) { // Get URL of the uploaded file
                             console.log(url); // Save the URL into users collection
-                            db.collection("posts").doc(id).update({
-                                    "image": url
-                                })
+                            console.log(`File URL: ${url}`);
+                            db.collection("posts").doc(postid).update({
+                                "image": url
+                            })
                                 .then(function () {
                                     console.log('Added post picture to Firestore.');
+                                    //window.location.href="main.html";
                                 })
                         })
+                })
+        }
+
+        function showDatabasePicture() {
+            db.collection("posts")
+                .get()
+                .then(function (snap) {
+                    snap.forEach(function (doc) {
+                        var fbsURL = doc.data().image;
+                        console.log(fbsURL);
+                        //var httpsReference = firebase.storage().refFromURL(fbsURL);  
+                        //console.log(httpsReference);
+                        if (fbsURL) {   //ie, not undefined or null
+                            blah = fbsURL.toString();
+
+                            document.getElementById("database-picture-goes-here").innerHTML +=
+                                "<img src=" + fbsURL + "> <br>"
+
+                            //document.getElementById("database-picture-goes-here").innerHTML +=
+                            //"<img src=${fbsURL}> <hi>--</h1>";
+                            //"<img src=" + fbsURL + "> <br>";
+
+                        }
+                    })
                 })
         }
     </script>
